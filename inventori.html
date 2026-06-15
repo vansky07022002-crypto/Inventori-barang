@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StokKu — Manajemen Inventori</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Inter', sans-serif; }
+  body { background: #0F172A; color: #E2E8F0; }
+
+  .card { background: #1E293B; border: 1px solid #334155; border-radius: 12px; }
+  .input-field {
+    background: #0F172A;
+    border: 1px solid #334155;
+    color: #E2E8F0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    width: 100%;
+    transition: border-color 0.2s;
+    font-size: 14px;
+  }
+  .input-field:focus { outline: none; border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+  .input-field::placeholder { color: #475569; }
+  select.input-field option { background: #1E293B; }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #3B82F6, #2563EB);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    width: 100%;
+    transition: transform 0.15s, box-shadow 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,130,246,0.35); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-icon {
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-plus  { background: rgba(16,185,129,0.15); color: #10B981; }
+  .btn-plus:hover  { background: rgba(16,185,129,0.3); transform: scale(1.1); }
+  .btn-minus { background: rgba(239,68,68,0.12); color: #EF4444; }
+  .btn-minus:hover { background: rgba(239,68,68,0.25); transform: scale(1.1); }
+  .btn-del   { background: rgba(239,68,68,0.08); color: #EF4444; border: 1px solid rgba(239,68,68,0.2); }
+  .btn-del:hover { background: rgba(239,68,68,0.2); transform: scale(1.05); }
+
+  /* Stok badge */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .badge-ok     { background: rgba(16,185,129,0.12); color: #10B981; border: 1px solid rgba(16,185,129,0.2); }
+  .badge-low    { background: rgba(245,158,11,0.12); color: #F59E0B; border: 1px solid rgba(245,158,11,0.2); }
+  .badge-empty  { background: rgba(239,68,68,0.12);  color: #EF4444;  border: 1px solid rgba(239,68,68,0.2); }
+
+  /* Stok number flash */
+  @keyframes flash-green { 0%,100%{background:transparent} 50%{background:rgba(16,185,129,0.2)} }
+  @keyframes flash-red   { 0%,100%{background:transparent} 50%{background:rgba(239,68,68,0.15)} }
+  .flash-g { animation: flash-green 0.4s ease; border-radius:6px; }
+  .flash-r { animation: flash-red   0.4s ease; border-radius:6px; }
+
+  /* Table */
+  table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  thead th {
+    background: #0F172A;
+    color: #64748B;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 12px 16px;
+    text-align: left;
+    position: sticky; top: 0;
+  }
+  thead th:first-child { border-radius: 8px 0 0 8px; }
+  thead th:last-child  { border-radius: 0 8px 8px 0; }
+  tbody tr {
+    border-bottom: 1px solid #1E293B;
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: rgba(59,130,246,0.04); }
+  tbody td { padding: 14px 16px; font-size: 14px; }
+
+  /* Category pill */
+  .cat-pill {
+    font-size: 11px; font-weight: 500;
+    padding: 3px 10px; border-radius: 20px;
+    background: rgba(148,163,184,0.1);
+    color: #94A3B8;
+    white-space: nowrap;
+  }
+
+  /* Search */
+  .search-wrap { position: relative; }
+  .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#475569; font-size:15px; pointer-events:none; }
+  .search-wrap .input-field { padding-left: 38px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0F172A; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+  /* Stats cards */
+  .stat-card { background: #1E293B; border: 1px solid #334155; border-radius: 10px; padding: 16px 18px; }
+  .stat-val { font-size: 22px; font-weight: 700; color: #F8FAFC; }
+  .stat-lbl { font-size: 11px; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: all; }
+  .modal-box {
+    background: #1E293B; border: 1px solid #334155; border-radius: 14px;
+    padding: 28px; width: 360px; transform: scale(0.95); transition: transform 0.2s;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-overlay.show .modal-box { transform: scale(1); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #1E293B; border: 1px solid #334155;
+    border-radius: 10px; padding: 12px 18px;
+    font-size: 14px; font-weight: 500;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+    z-index: 200; display: flex; align-items: center; gap: 10px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 60px 20px; color: #475569; }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* Sidebar label */
+  .form-label { font-size: 12px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; display: block; }
+
+  @media (max-width: 900px) {
+    .layout-grid { flex-direction: column !important; }
+    .sidebar { width: 100% !important; }
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- Header -->
+<header style="background:#1E293B; border-bottom:1px solid #334155;">
+  <div style="max-width:1400px; margin:0 auto; padding:0 24px; display:flex; align-items:center; justify-content:space-between; height:60px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:32px;height:32px;background:linear-gradient(135deg,#3B82F6,#8B5CF6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">📦</div>
+      <span style="font-size:18px;font-weight:700;color:#F8FAFC;">StokKu</span>
+      <span style="font-size:12px;color:#475569;margin-left:4px;">Manajemen Inventori</span>
+    </div>
+    <div style="font-size:12px;color:#475569;">Data tersimpan di peramban Anda</div>
+  </div>
+</header>
+
+<!-- Main -->
+<div style="max-width:1400px;margin:0 auto;padding:24px;">
+
+  <!-- Stats Row -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px;" id="statsRow">
+  </div>
+
+  <!-- Layout -->
+  <div class="layout-grid" style="display:flex;gap:20px;align-items:flex-start;">
+
+    <!-- Sidebar Form -->
+    <div class="sidebar card" style="width:300px;flex-shrink:0;padding:22px;">
+      <h2 style="font-size:15px;font-weight:700;color:#F8FAFC;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+        <span style="width:22px;height:22px;background:rgba(59,130,246,0.15);border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;">+</span>
+        Tambah Barang
+      </h2>
+
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label class="form-label">Nama Barang</label>
+          <input class="input-field" id="inpNama" placeholder="mis. Laptop ASUS ROG" />
+        </div>
+        <div>
+          <label class="form-label">Kategori</label>
+          <select class="input-field" id="inpKategori">
+            <option value="">— Pilih Kategori —</option>
+            <option>Elektronik</option>
+            <option>Pakaian</option>
+            <option>Makanan</option>
+            <option>Alat Tulis</option>
+            <option>Lainnya</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Stok Awal</label>
+          <input class="input-field" id="inpStok" type="number" min="0" placeholder="0" />
+        </div>
+        <div>
+          <label class="form-label">Harga (Rp)</label>
+          <input class="input-field" id="inpHarga" type="number" min="0" placeholder="0" />
+        </div>
+
+        <div id="formError" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px;font-size:13px;color:#EF4444;"></div>
+
+        <button class="btn-primary" onclick="tambahBarang()">＋ Tambah Barang</button>
+      </div>
+
+      <!-- Divider -->
+      <div style="border-top:1px solid #334155;margin:20px 0;"></div>
+
+      <!-- Legend -->
+      <div style="font-size:11px;color:#64748B;">
+        <div style="font-weight:600;color:#475569;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">Keterangan Stok</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:8px;"><span class="badge badge-ok">Aman</span><span>Stok ≥ 10</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span class="badge badge-low">Menipis</span><span>Stok 1–9</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span class="badge badge-empty">Habis</span><span>Stok 0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Area -->
+    <div style="flex:1;min-width:0;">
+
+      <!-- Search -->
+      <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center;">
+        <div class="search-wrap" style="flex:1;">
+          <span class="search-icon">🔍</span>
+          <input class="input-field" id="searchInput" placeholder="Cari nama barang..." oninput="renderTable()" />
+        </div>
+        <div style="font-size:13px;color:#475569;white-space:nowrap;" id="itemCount">0 barang</div>
+      </div>
+
+      <!-- Table Card -->
+      <div class="card" style="overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Nama Barang</th>
+                <th>Kategori</th>
+                <th style="text-align:center;">Stok</th>
+                <th>Harga</th>
+                <th style="text-align:center;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+          <div id="emptyState" class="empty-state" style="display:none;">
+            <div class="icon">📋</div>
+            <div style="font-size:15px;font-weight:600;color:#334155;margin-bottom:4px;">Belum ada barang</div>
+            <div style="font-size:13px;">Tambahkan barang pertama Anda menggunakan form di kiri.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div style="font-size:32px;text-align:center;margin-bottom:12px;">🗑️</div>
+    <h3 style="font-size:16px;font-weight:700;color:#F8FAFC;text-align:center;margin-bottom:8px;">Hapus Barang?</h3>
+    <p style="font-size:13px;color:#94A3B8;text-align:center;margin-bottom:22px;" id="modalMsg"></p>
+    <div style="display:flex;gap:10px;">
+      <button onclick="tutupModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #334155;background:transparent;color:#94A3B8;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.15s;" onmouseover="this.style.background='#334155'" onmouseout="this.style.background='transparent'">Batal</button>
+      <button onclick="konfirmasiHapus()" style="flex:1;padding:10px;border-radius:8px;border:none;background:#EF4444;color:white;cursor:pointer;font-size:14px;font-weight:600;transition:all 0.15s;" onmouseover="this.style.background='#DC2626'" onmouseout="this.style.background='#EF4444'">Ya, Hapus</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span class="toast-dot" id="toastDot"></span>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────
+let barang = [];
+let hapusId = null;
+
+// ─── LocalStorage ────────────────────────────────────
+function simpan() { localStorage.setItem('stokku_data', JSON.stringify(barang)); }
+function muat()   {
+  const raw = localStorage.getItem('stokku_data');
+  if (raw) try { barang = JSON.parse(raw); } catch(e) { barang = []; }
+}
+
+// ─── Init ─────────────────────────────────────────────
+muat();
+renderTable();
+renderStats();
+
+// ─── Format Rupiah ────────────────────────────────────
+function formatRp(n) {
+  return 'Rp ' + Number(n).toLocaleString('id-ID');
+}
+
+// ─── Tambah Barang ────────────────────────────────────
+function tambahBarang() {
+  const nama = document.getElementById('inpNama').value.trim();
+  const kat  = document.getElementById('inpKategori').value;
+  const stok = parseInt(document.getElementById('inpStok').value) || 0;
+  const harga= parseInt(document.getElementById('inpHarga').value) || 0;
+  const errEl= document.getElementById('formError');
+
+  errEl.style.display = 'none';
+  if (!nama) { showError('Nama barang wajib diisi.'); return; }
+  if (!kat)  { showError('Pilih kategori barang.'); return; }
+  if (stok < 0) { showError('Stok tidak boleh negatif.'); return; }
+
+  barang.unshift({ id: Date.now(), nama, kategori: kat, stok, harga });
+  simpan(); renderTable(); renderStats();
+
+  // Reset form
+  document.getElementById('inpNama').value = '';
+  document.getElementById('inpKategori').value = '';
+  document.getElementById('inpStok').value = '';
+  document.getElementById('inpHarga').value = '';
+
+  showToast('✅ Barang berhasil ditambahkan!', '#10B981');
+}
+
+function showError(msg) {
+  const el = document.getElementById('formError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ─── Ubah Stok ────────────────────────────────────────
+function ubahStok(id, delta) {
+  const item = barang.find(b => b.id === id);
+  if (!item) return;
+  item.stok = Math.max(0, item.stok + delta);
+  simpan(); renderTable(); renderStats();
+
+  // Flash animation
+  setTimeout(() => {
+    const el = document.getElementById('stok_' + id);
+    if (el) {
+      el.classList.remove('flash-g','flash-r');
+      void el.offsetWidth;
+      el.classList.add(delta > 0 ? 'flash-g' : 'flash-r');
+    }
+  }, 10);
+}
+
+// ─── Hapus ────────────────────────────────────────────
+function tanyaHapus(id) {
+  const item = barang.find(b => b.id === id);
+  if (!item) return;
+  hapusId = id;
+  document.getElementById('modalMsg').textContent = `"${item.nama}" akan dihapus secara permanen dari daftar inventori.`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function tutupModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  hapusId = null;
+}
+
+function konfirmasiHapus() {
+  barang = barang.filter(b => b.id !== hapusId);
+  simpan(); renderTable(); renderStats();
+  tutupModal();
+  showToast('🗑️ Barang dihapus.', '#EF4444');
+}
+
+// Close modal on overlay click
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) tutupModal();
+});
+
+// ─── Render Table ─────────────────────────────────────
+function renderTable() {
+  const q    = document.getElementById('searchInput').value.toLowerCase();
+  const filt = barang.filter(b => b.nama.toLowerCase().includes(q));
+  const body = document.getElementById('tableBody');
+  const emp  = document.getElementById('emptyState');
+  const cnt  = document.getElementById('itemCount');
+
+  cnt.textContent = filt.length + ' barang';
+
+  if (filt.length === 0) {
+    body.innerHTML = '';
+    emp.style.display = 'block';
+    return;
+  }
+  emp.style.display = 'none';
+
+  body.innerHTML = filt.map(item => {
+    const sc = item.stok === 0 ? 'badge-empty' : item.stok < 10 ? 'badge-low' : 'badge-ok';
+    const sl = item.stok === 0 ? 'Habis' : item.stok < 10 ? 'Menipis' : 'Aman';
+    return `
+    <tr>
+      <td>
+        <div style="font-weight:600;color:#F1F5F9;">${escHtml(item.nama)}</div>
+        <div style="font-size:11px;color:#475569;margin-top:2px;">#${item.id}</div>
+      </td>
+      <td><span class="cat-pill">${escHtml(item.kategori)}</span></td>
+      <td style="text-align:center;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+          <button class="btn-icon btn-minus" onclick="ubahStok(${item.id},-1)" title="Kurangi stok">−</button>
+          <div style="min-width:60px;text-align:center;">
+            <div id="stok_${item.id}" style="font-size:18px;font-weight:700;color:#F8FAFC;line-height:1;">${item.stok}</div>
+            <span class="badge ${sc}" style="margin-top:3px;">${sl}</span>
+          </div>
+          <button class="btn-icon btn-plus" onclick="ubahStok(${item.id},1)" title="Tambah stok">＋</button>
+        </div>
+      </td>
+      <td style="font-weight:500;color:#CBD5E1;white-space:nowrap;">${formatRp(item.harga)}</td>
+      <td style="text-align:center;">
+        <button class="btn-icon btn-del" onclick="tanyaHapus(${item.id})" title="Hapus barang" style="margin:auto;">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── Render Stats ─────────────────────────────────────
+function renderStats() {
+  const total    = barang.length;
+  const habis    = barang.filter(b => b.stok === 0).length;
+  const menipis  = barang.filter(b => b.stok > 0 && b.stok < 10).length;
+  const nilaiTotal = barang.reduce((s, b) => s + b.stok * b.harga, 0);
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-val">${total}</div>
+      <div class="stat-lbl">Total Barang</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:#EF4444;">${habis}</div>
+      <div class="stat-lbl">Stok Habis</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:#F59E0B;">${menipis}</div>
+      <div class="stat-lbl">Stok Menipis</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:#10B981;font-size:17px;">${formatRp(nilaiTotal)}</div>
+      <div class="stat-lbl">Nilai Inventori</div>
+    </div>
+  `;
+}
+
+// ─── Toast ────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, color = '#10B981') {
+  const t  = document.getElementById('toast');
+  const d  = document.getElementById('toastDot');
+  const m  = document.getElementById('toastMsg');
+  d.style.background = color;
+  m.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ─── Enter key on form ────────────────────────────────
+['inpNama','inpKategori','inpStok','inpHarga'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') tambahBarang();
+  });
+});
+
+// ─── Utils ────────────────────────────────────────────
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
